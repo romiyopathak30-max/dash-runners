@@ -1,0 +1,158 @@
+{
+  "entities": {
+    "RunnerProfile": {
+      "title": "RunnerProfile",
+      "description": "Authenticated player profile storing progression, coins, high scores, unlocked runners, hoverboards, and power-up upgrade levels.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the player."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Player display name."
+        },
+        "coins": {
+          "type": "integer",
+          "description": "Total accumulated gold coins."
+        },
+        "highScore": {
+          "type": "integer",
+          "description": "All-time highest score."
+        },
+        "bestDistance": {
+          "type": "integer",
+          "description": "Longest distance run in meters."
+        },
+        "totalRuns": {
+          "type": "integer",
+          "description": "Total completed runs."
+        },
+        "selectedRunnerId": {
+          "type": "string",
+          "enum": ["blaze", "nova", "volt", "shadow"],
+          "description": "Active playable runner skin."
+        },
+        "selectedBoardId": {
+          "type": "string",
+          "enum": ["aero", "pulse", "inferno", "phantom"],
+          "description": "Active hoverboard model."
+        },
+        "unlockedRunners": {
+          "type": "array",
+          "description": "Bounded list of unlocked runner IDs."
+        },
+        "unlockedBoards": {
+          "type": "array",
+          "description": "Bounded list of unlocked hoverboard IDs."
+        },
+        "hoverboardsCount": {
+          "type": "integer",
+          "description": "Consumable hoverboard charges available."
+        },
+        "magnetLevel": {
+          "type": "integer",
+          "description": "Coin Magnet duration level (1-5)."
+        },
+        "jetpackLevel": {
+          "type": "integer",
+          "description": "Jetpack duration level (1-5)."
+        },
+        "sneakersLevel": {
+          "type": "integer",
+          "description": "Super Sneakers duration level (1-5)."
+        },
+        "multiplierLevel": {
+          "type": "integer",
+          "description": "2x Score Multiplier duration level (1-5)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was last updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "coins",
+        "highScore",
+        "bestDistance",
+        "totalRuns",
+        "selectedRunnerId",
+        "selectedBoardId",
+        "unlockedRunners",
+        "unlockedBoards",
+        "hoverboardsCount",
+        "magnetLevel",
+        "jetpackLevel",
+        "sneakersLevel",
+        "multiplierLevel",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RunRecord": {
+      "title": "RunRecord",
+      "description": "Immutable record of a completed Dash Runners run.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the player."
+        },
+        "score": {
+          "type": "integer",
+          "description": "Final run score."
+        },
+        "distanceMeters": {
+          "type": "integer",
+          "description": "Distance covered in meters."
+        },
+        "coinsCollected": {
+          "type": "integer",
+          "description": "Coins picked up during the run."
+        },
+        "runnerId": {
+          "type": "string",
+          "enum": ["blaze", "nova", "volt", "shadow"],
+          "description": "Runner used in this run."
+        },
+        "boardUsed": {
+          "type": "boolean",
+          "description": "Whether a hoverboard was activated during the run."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of run completion (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "score",
+        "distanceMeters",
+        "coinsCollected",
+        "runnerId",
+        "boardUsed",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/RunnerProfile" },
+      "description": "Private player progression, currency, unlocks, and upgrade levels."
+    },
+    "/users/{userId}/runs/{runId}": {
+      "schema": { "$ref": "#/entities/RunRecord" },
+      "description": "User-scoped immutable run history records."
+    }
+  }
+}

@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny all unconfigured paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidRunnerId(id) {
+      return id is string && id in ['blaze', 'nova', 'volt', 'shadow'];
+    }
+
+    function isValidBoardId(id) {
+      return id is string && id in ['aero', 'pulse', 'inferno', 'phantom'];
+    }
+
+    function isValidRunnerProfile(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string &&
+             data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             data.coins is int && data.coins >= 0 && data.coins <= 999999999 &&
+             data.highScore is int && data.highScore >= 0 && data.highScore <= 999999999 &&
+             data.bestDistance is int && data.bestDistance >= 0 && data.bestDistance <= 999999999 &&
+             data.totalRuns is int && data.totalRuns >= 0 && data.totalRuns <= 9999999 &&
+             isValidRunnerId(data.selectedRunnerId) &&
+             isValidBoardId(data.selectedBoardId) &&
+             data.unlockedRunners is list &&
+             data.unlockedRunners.size() >= 1 && data.unlockedRunners.size() <= 10 &&
+             data.unlockedRunners[0] is string &&
+             data.unlockedBoards is list &&
+             data.unlockedBoards.size() >= 1 && data.unlockedBoards.size() <= 10 &&
+             data.unlockedBoards[0] is string &&
+             data.hoverboardsCount is int && data.hoverboardsCount >= 0 && data.hoverboardsCount <= 9999 &&
+             data.magnetLevel is int && data.magnetLevel >= 1 && data.magnetLevel <= 5 &&
+             data.jetpackLevel is int && data.jetpackLevel >= 1 && data.jetpackLevel <= 5 &&
+             data.sneakersLevel is int && data.sneakersLevel >= 1 && data.sneakersLevel <= 5 &&
+             data.multiplierLevel is int && data.multiplierLevel >= 1 && data.multiplierLevel <= 5 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidRunRecord(data, userId) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.userId == userId &&
+             data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.score is int && data.score >= 0 && data.score <= 999999999 &&
+             data.distanceMeters is int && data.distanceMeters >= 0 && data.distanceMeters <= 999999999 &&
+             data.coinsCollected is int && data.coinsCollected >= 0 && data.coinsCollected <= 9999999 &&
+             isValidRunnerId(data.runnerId) &&
+             data.boardUsed is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'coins', 'highScore', 'bestDistance',
+                         'totalRuns', 'selectedRunnerId', 'selectedBoardId',
+                         'unlockedRunners', 'unlockedBoards', 'hoverboardsCount',
+                         'magnetLevel', 'jetpackLevel', 'sneakersLevel', 'multiplierLevel',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'coins', 'highScore', 'bestDistance',
+                         'totalRuns', 'selectedRunnerId', 'selectedBoardId',
+                         'unlockedRunners', 'unlockedBoards', 'hoverboardsCount',
+                         'magnetLevel', 'jetpackLevel', 'sneakersLevel', 'multiplierLevel',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidRunnerProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidRunnerProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'coins', 'highScore', 'bestDistance',
+                         'totalRuns', 'selectedRunnerId', 'selectedBoardId',
+                         'unlockedRunners', 'unlockedBoards', 'hoverboardsCount',
+                         'magnetLevel', 'jetpackLevel', 'sneakersLevel', 'multiplierLevel',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /runs/{runId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(runId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(runId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll([
+                           'userId', 'score', 'distanceMeters', 'coinsCollected',
+                           'runnerId', 'boardUsed', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'score', 'distanceMeters', 'coinsCollected',
+                           'runnerId', 'boardUsed', 'createdAt'
+                         ]) &&
+                         isValidRunRecord(incoming(), userId);
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}
